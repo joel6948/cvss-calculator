@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CVSS v3.1 Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e17;
+    --surface: #0f1623;
+    --surface2: #161e2e;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #0099cc;
+    --text: #c8d8e8;
+    --text-dim: #5a7a9a;
+    --none: #4a5568;
+    --low: #38a169;
+    --medium: #d69e2e;
+    --high: #e53e3e;
+    --critical: #9b2c2c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    padding: 2rem;
+    background-image: 
+      radial-gradient(ellipse at 20% 20%, rgba(0,212,255,0.03) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(0,153,204,0.03) 0%, transparent 60%);
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 3rem;
+    animation: fadeDown 0.6s ease;
+  }
+
+  header h1 {
+    font-size: 2.8rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-shadow: 0 0 30px rgba(0,212,255,0.3);
+  }
+
+  header p {
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    letter-spacing: 2px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    animation: fadeUp 0.6s ease;
+  }
+
+  .section h2 {
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.2rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .metric {
+    margin-bottom: 1.2rem;
+  }
+
+  .metric label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-bottom: 0.5rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+
+  .btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn.active {
+    background: rgba(0,212,255,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 10px rgba(0,212,255,0.1);
+  }
+
+  .result-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    animation: fadeUp 0.8s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .result-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .score-display {
+    font-size: 5rem;
+    font-weight: 700;
+    font-family: 'Share Tech Mono', monospace;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    transition: all 0.3s;
+  }
+
+  .severity-badge {
+    display: inline-block;
+    padding: 0.4rem 2rem;
+    border-radius: 4px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    transition: all 0.3s;
+  }
+
+  .severity-none   { background: rgba(74,85,104,0.2); color: #4a5568; border: 1px solid #4a5568; }
+  .severity-low    { background: rgba(56,161,105,0.2); color: #38a169; border: 1px solid #38a169; }
+  .severity-medium { background: rgba(214,158,46,0.2); color: #d69e2e; border: 1px solid #d69e2e; }
+  .severity-high   { background: rgba(229,62,62,0.2); color: #e53e3e; border: 1px solid #e53e3e; }
+  .severity-critical { background: rgba(155,44,44,0.3); color: #fc8181; border: 1px solid #fc8181; box-shadow: 0 0 20px rgba(229,62,62,0.2); }
+
+  .vector-string {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    background: var(--surface2);
+    padding: 0.8rem 1.2rem;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    word-break: break-all;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .vector-string:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .copy-hint {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  .score-display.none-color     { color: #4a5568; }
+  .score-display.low-color      { color: #38a169; }
+  .score-display.medium-color   { color: #d69e2e; }
+  .score-display.high-color     { color: #e53e3e; }
+  .score-display.critical-color { color: #fc8181; text-shadow: 0 0 30px rgba(229,62,62,0.4); }
+
+  .calc-btn {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,153,204,0.1));
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 1.5rem;
+  }
+
+  .calc-btn:hover {
+    background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,153,204,0.2));
+    box-shadow: 0 0 20px rgba(0,212,255,0.2);
+  }
+
+  .presets {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .preset-btn {
+    padding: 0.3rem 0.8rem;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+
+  .preset-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .preset-label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .copied-toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--accent);
+    color: var(--bg);
+    padding: 0.6rem 1.2rem;
+    border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+
+  .copied-toast.show { opacity: 1; }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 600px) {
+    .grid { grid-template-columns: 1fr; }
+    header h1 { font-size: 1.8rem; }
+    .score-display { font-size: 3.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>CVSS v3.1</h1>
+    <p>// COMMON VULNERABILITY SCORING SYSTEM CALCULATOR //</p>
+  </header>
+
+  <div style="text-align:center; margin-bottom:1.5rem;">
+    <div class="preset-label">Quick Presets</div>
+    <div class="presets">
+      <button class="preset-btn" onclick="loadPreset('log4shell')">Log4Shell</button>
+      <button class="preset-btn" onclick="loadPreset('eternalblue')">EternalBlue</button>
+      <button class="preset-btn" onclick="loadPreset('printnightmare')">PrintNightmare</button>
+      <button class="preset-btn" onclick="loadPreset('heartbleed')">Heartbleed</button>
+      <button class="preset-btn" onclick="resetAll()">Reset</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="section">
+      <h2>// Exploitability Metrics</h2>
+
+      <div class="metric">
+        <label>Attack Vector (AV)</label>
+        <div class="btn-group">
+          <button class="btn" data-metric="av" data-val="N" onclick="select(this)">Network</button>
+          <button class="btn" data-metric="av" data-val="A" onclick="select(this)">Adjacent</button>
+          <button class="btn" data-metric="av" data-val="L" onclick="select(this)">Local</button>
+          <button class="btn" data-metric="av" data-val="P" onclick="select(this)">Physical</button>
+        </div>
+      </div>
+
+      <div class="metric">
+        <label>Attack Complexity (AC)</label>
+        <div class="btn-group">
+          <button class="btn" data-metric="ac" data-val="L" onclick="select(this)">Low</button>
+          <button class="btn" data-metric="ac" data-val="H" onclick="select(this)">High</button>
+        </div>
+      </div>
+
+      <div class="metric">
+        <label>Privileges Required (PR)</label>
+        <div class="btn-group">
+          <button class="btn" data-metric="pr" data-val="N" onclick="select(this)">None</button>
+          <button class="btn" data-metric="pr" data-val="L" onclick="select(this)">Low</button>
+          <button class="btn" data-metric="pr" data-val="H" onclick="select(this)">High</button>
+        </div>
+      </div>
+
+      <div class="metric">
+        <label>User Interaction (UI)</label>
+        <div class="btn-group">
+          <button class="btn" data-metric="ui" data-val="N" onclick="select(this)">None</button>
+          <button class="btn" data-metric="ui" data-val="R" onclick="select(this)">Required</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>// Impact Metrics</h2>
+
+      <div class="metric">
+        <label>Scope (S)</label>
+        <div class="btn-group">
+          <button class="btn" data-metric="s" data-val="U" onclick="select(this)">Unchanged</button>
+          <button class="btn" data-metric="s" data-val="C" onclick="select(this)">Changed</button>
+        </div>
+      </div>
+
+      <div class="metric">
+        <label>Confidentiality (C)</label>
+        <div class="btn-group">
+          <button class="btn" data-metric="c" data-val="N" onclick="select(this)">None</button>
+          <button class="btn" data-metric="c" data-val="L" onclick="select(this)">Low</button>
+          <button class="btn" data-metric="c" data-val="H" onclick="select(this)">High</button>
+        </div>
+      </div>
+
+      <div class="metric">
+        <label>Integrity (I)</label>
+        <div class="btn-group">
+          <button class="btn" data-metric="i" data-val="N" onclick="select(this)">None</button>
+          <button class="btn" data-metric="i" data-val="L" onclick="select(this)">Low</button>
+          <button class="btn" data-metric="i" data-val="H" onclick="select(this)">High</button>
+        </div>
+      </div>
+
+      <div class="metric">
+        <label>Availability (A)</label>
+        <div class="btn-group">
+          <button class="btn" data-metric="a" data-val="N" onclick="select(this)">None</button>
+          <button class="btn" data-metric="a" data-val="L" onclick="select(this)">Low</button>
+          <button class="btn" data-metric="a" data-val="H" onclick="select(this)">High</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="calc-btn" onclick="calculate()">Calculate Score</button>
+
+  <div class="result-panel">
+    <div class="score-display none-color" id="score">—</div>
+    <div class="severity-badge severity-none" id="severity">SELECT METRICS</div>
+    <br>
+    <div class="vector-string" id="vector" onclick="copyVector()">
+      <span id="vectorText">CVSS:3.1/AV:_/AC:_/PR:_/UI:_/S:_/C:_/I:_/A:_</span>
+      <span class="copy-hint">CLICK TO COPY</span>
+    </div>
+  </div>
+</div>
+
+<div class="copied-toast" id="toast">COPIED!</div>
+
+<script>
+  const weights = {
+    av: { N: 0.85, A: 0.62, L: 0.55, P: 0.20 },
+    ac: { L: 0.77, H: 0.44 },
+    pr: { N: 0.85, L: 0.62, H: 0.27 },
+    ui: { N: 0.85, R: 0.62 },
+    c:  { N: 0.00, L: 0.22, H: 0.56 },
+    i:  { N: 0.00, L: 0.22, H: 0.56 },
+    a:  { N: 0.00, L: 0.22, H: 0.56 }
+  };
+
+  const selected = { av: null, ac: null, pr: null, ui: null, s: null, c: null, i: null, a: null };
+
+  const presets = {
+    log4shell:      { av:'N', ac:'L', pr:'N', ui:'N', s:'C', c:'H', i:'H', a:'H' },
+    eternalblue:    { av:'N', ac:'H', pr:'N', ui:'N', s:'U', c:'H', i:'H', a:'H' },
+    printnightmare: { av:'N', ac:'L', pr:'L', ui:'N', s:'C', c:'H', i:'H', a:'H' },
+    heartbleed:     { av:'N', ac:'L', pr:'N', ui:'N', s:'U', c:'H', i:'N', a:'N' }
+  };
+
+  function select(btn) {
+    const metric = btn.dataset.metric;
+    const val = btn.dataset.val;
+    document.querySelectorAll(`[data-metric="${metric}"]`).forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selected[metric] = val;
+    calculate();
+  }
+
+  function calculate() {
+    const { av, ac, pr, ui, s, c, i, a } = selected;
+    if (!av || !ac || !pr || !ui || !s || !c || !i || !a) {
+      updateVector();
+      return;
+    }
+
+    const iss = 1 - ((1 - weights.c[c]) * (1 - weights.i[i]) * (1 - weights.a[a]));
+    let impact;
+    if (s === 'U') {
+      impact = 6.42 * iss;
+    } else {
+      impact = 7.52 * (iss - 0.029) - 3.25 * Math.pow(iss - 0.02, 15);
+    }
+
+    const exploitability = 8.22 * weights.av[av] * weights.ac[ac] * weights.pr[pr] * weights.ui[ui];
+
+    let score;
+    if (impact <= 0) {
+      score = 0.0;
+    } else if (s === 'U') {
+      score = Math.min(impact + exploitability, 10);
+    } else {
+      score = Math.min(1.08 * (impact + exploitability), 10);
+    }
+    score = Math.ceil(score * 10) / 10;
+
+    let severity, colorClass, badgeClass;
+    if (score === 0.0)      { severity = 'None';     colorClass = 'none-color';     badgeClass = 'severity-none'; }
+    else if (score <= 3.9)  { severity = 'Low';      colorClass = 'low-color';      badgeClass = 'severity-low'; }
+    else if (score <= 6.9)  { severity = 'Medium';   colorClass = 'medium-color';   badgeClass = 'severity-medium'; }
+    else if (score <= 8.9)  { severity = 'High';     colorClass = 'high-color';     badgeClass = 'severity-high'; }
+    else                    { severity = 'Critical';  colorClass = 'critical-color'; badgeClass = 'severity-critical'; }
+
+    const scoreEl = document.getElementById('score');
+    scoreEl.textContent = score.toFixed(1);
+    scoreEl.className = `score-display ${colorClass}`;
+
+    const sevEl = document.getElementById('severity');
+    sevEl.textContent = severity;
+    sevEl.className = `severity-badge ${badgeClass}`;
+
+    updateVector();
+  }
+
+  function updateVector() {
+    const { av, ac, pr, ui, s, c, i, a } = selected;
+    const v = `CVSS:3.1/AV:${av||'_'}/AC:${ac||'_'}/PR:${pr||'_'}/UI:${ui||'_'}/S:${s||'_'}/C:${c||'_'}/I:${i||'_'}/A:${a||'_'}`;
+    document.getElementById('vectorText').textContent = v;
+  }
+
+  function loadPreset(name) {
+    const preset = presets[name];
+    Object.entries(preset).forEach(([metric, val]) => {
+      const btn = document.querySelector(`[data-metric="${metric}"][data-val="${val}"]`);
+      if (btn) {
+        document.querySelectorAll(`[data-metric="${metric}"]`).forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selected[metric] = val;
+      }
+    });
+    calculate();
+  }
+
+  function resetAll() {
+    Object.keys(selected).forEach(k => selected[k] = null);
+    document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('score').textContent = '—';
+    document.getElementById('score').className = 'score-display none-color';
+    document.getElementById('severity').textContent = 'SELECT METRICS';
+    document.getElementById('severity').className = 'severity-badge severity-none';
+    updateVector();
+  }
+
+  function copyVector() {
+    const text = document.getElementById('vectorText').textContent;
+    navigator.clipboard.writeText(text);
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+</script>
+</body>
+</html>
